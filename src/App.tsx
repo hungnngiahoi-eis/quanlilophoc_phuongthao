@@ -49,7 +49,9 @@ import {
   ShieldAlert,
   UserCheck,
   Key,
-  Shield
+  Shield,
+  Edit3,
+  Building2
 } from 'lucide-react';
 
 export default function App() {
@@ -88,6 +90,7 @@ export default function App() {
   const [isStudentProfileOpen, setIsStudentProfileOpen] = useState(false);
   const [isGSModalOpen, setIsGSModalOpen] = useState(false);
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
+  const [classToEdit, setClassToEdit] = useState<ClassData | null>(null);
   const [isClassDropdownOpen, setIsClassDropdownOpen] = useState(false);
 
   // Sync state (Requirement 2 & Multi-device persistence)
@@ -357,6 +360,22 @@ export default function App() {
     setAppData((prev) => ({ ...prev, teacherPin: newPin }));
   };
 
+  // Handler: Open Create Class Modal
+  const handleOpenCreateClass = () => {
+    setClassToEdit(null);
+    setIsClassModalOpen(true);
+  };
+
+  // Handler: Open Edit Class Modal
+  const handleOpenEditClass = (cls: ClassData) => {
+    if (!isTeacher) {
+      setIsLoginModalOpen(true);
+      return;
+    }
+    setClassToEdit(cls);
+    setIsClassModalOpen(true);
+  };
+
   // Handler: Create new Class
   const handleCreateClass = (data: { name: string; gradeLevel: number; schoolYear: string; roomName: string }) => {
     const newClassId = `class-${Date.now()}`;
@@ -386,6 +405,40 @@ export default function App() {
       activeClassId: newClassId,
     }));
     showNotification('success', `Đã tạo ${data.name} thành công!`);
+  };
+
+  // Handler: Update existing Class
+  const handleUpdateClass = (id: string, data: { name: string; gradeLevel: number; schoolYear: string; roomName: string }) => {
+    userModifiedRef.current = true;
+    setSyncStatus('pending');
+    setAppData((prev) => ({
+      ...prev,
+      classes: prev.classes.map((c) => {
+        if (c.id === id) {
+          return {
+            ...c,
+            name: data.name,
+            gradeLevel: data.gradeLevel,
+            schoolYear: data.schoolYear,
+            roomName: data.roomName,
+          };
+        }
+        return c;
+      }),
+    }));
+
+    // Update current student session if matching
+    setCurrentStudent((prev) => {
+      if (prev && prev.classId === id) {
+        return {
+          ...prev,
+          className: data.name,
+        };
+      }
+      return prev;
+    });
+
+    showNotification('success', `Đã cập nhật thông tin lớp "${data.name}" thành công!`);
   };
 
   // Safe delete class (Requirement 5)
@@ -840,15 +893,26 @@ export default function App() {
                     </button>
 
                     {isTeacher && (
-                      <button
-                        id="open-create-class-modal-btn"
-                        type="button"
-                        onClick={() => setIsClassModalOpen(true)}
-                        className="p-1.5 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors shadow-2xs"
-                        title="Tạo thêm lớp mới"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          id="open-edit-active-class-btn"
+                          type="button"
+                          onClick={() => handleOpenEditClass(activeClass)}
+                          className="p-1.5 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors shadow-2xs"
+                          title={`Chỉnh sửa thông tin lớp ${activeClass?.name} (Tên lớp, khối, năm học, phòng học)`}
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          id="open-create-class-modal-btn"
+                          type="button"
+                          onClick={handleOpenCreateClass}
+                          className="p-1.5 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors shadow-2xs"
+                          title="Tạo thêm lớp mới"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -862,7 +926,7 @@ export default function App() {
                       />
 
                       {/* Hộp menu đổ xuống nổi bật, bóng đổ rõ nét */}
-                      <div className="absolute left-0 top-full mt-2 w-72 sm:w-80 bg-white rounded-2xl shadow-2xl border-2 border-indigo-500/30 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150">
+                      <div className="absolute left-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border-2 border-indigo-500/30 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150">
                         {/* Tiêu đề Menu */}
                         <div className="px-4 py-3 bg-gradient-to-r from-indigo-700 to-blue-700 text-white flex items-center justify-between shadow-xs">
                           <div className="flex items-center gap-2">
@@ -881,48 +945,76 @@ export default function App() {
                           {appData.classes.map((cls) => {
                             const isSelected = cls.id === activeClass.id;
                             return (
-                              <button
+                              <div
                                 key={cls.id}
-                                type="button"
-                                onClick={() => {
-                                  setAppData((prev) => ({ ...prev, activeClassId: cls.id }));
-                                  setIsClassDropdownOpen(false);
-                                }}
-                                className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between transition-all ${
+                                className={`w-full rounded-xl flex items-center justify-between transition-all group p-1 ${
                                   isSelected
                                     ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/20 ring-1 ring-indigo-400'
-                                    : 'hover:bg-indigo-50 text-slate-800 hover:text-indigo-950 font-medium'
+                                    : 'hover:bg-indigo-50/80 text-slate-800 font-medium'
                                 }`}
                               >
-                                <div className="flex items-center gap-2.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setAppData((prev) => ({ ...prev, activeClassId: cls.id }));
+                                    setIsClassDropdownOpen(false);
+                                  }}
+                                  className="flex-1 text-left px-2 py-1.5 flex items-center gap-2.5 min-w-0"
+                                >
                                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black shrink-0 ${
                                     isSelected ? 'bg-white text-indigo-700 shadow-xs' : 'bg-indigo-100 text-indigo-700'
                                   }`}>
                                     {cls.name.replace(/[^0-9a-zA-Z]/g, '').slice(0, 3) || 'LP'}
                                   </div>
-                                  <div>
-                                    <div className={`text-sm ${isSelected ? 'font-black text-white' : 'font-bold text-slate-800'}`}>
+                                  <div className="min-w-0">
+                                    <div className={`text-sm truncate ${isSelected ? 'font-black text-white' : 'font-bold text-slate-800'}`}>
                                       {cls.name}
                                     </div>
-                                    <div className={`text-[10px] ${isSelected ? 'text-indigo-100' : 'text-slate-400'}`}>
-                                      {cls.roomName ? `Phòng: ${cls.roomName}` : `Khối ${cls.gradeLevel}`}
+                                    <div className={`text-[10px] ${isSelected ? 'text-indigo-100' : 'text-slate-500'} flex items-center gap-1.5 flex-wrap`}>
+                                      <span>Khối {cls.gradeLevel}</span>
+                                      <span>•</span>
+                                      <span>{cls.schoolYear}</span>
+                                      {cls.roomName && (
+                                        <>
+                                          <span>•</span>
+                                          <span className="truncate max-w-[100px]">{cls.roomName}</span>
+                                        </>
+                                      )}
                                     </div>
                                   </div>
-                                </div>
+                                </button>
 
-                                <div className="flex items-center gap-2">
-                                  <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-bold ${
+                                <div className="flex items-center gap-1 shrink-0 pr-1">
+                                  <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${
                                     isSelected
                                       ? 'bg-white/20 text-white'
                                       : 'bg-slate-100 text-slate-600 border border-slate-200'
                                   }`}>
                                     {cls.students.length} HS
                                   </span>
+                                  {isTeacher && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsClassDropdownOpen(false);
+                                        handleOpenEditClass(cls);
+                                      }}
+                                      className={`p-1.5 rounded-lg transition-colors ${
+                                        isSelected
+                                          ? 'text-white/80 hover:text-white hover:bg-white/20'
+                                          : 'text-slate-400 hover:text-indigo-600 hover:bg-white border border-transparent hover:border-indigo-200'
+                                      }`}
+                                      title={`Sửa thông tin lớp ${cls.name}`}
+                                    >
+                                      <Edit3 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
                                   {isSelected && (
                                     <CheckCircle2 className="w-4 h-4 text-amber-300 shrink-0" />
                                   )}
                                 </div>
-                              </button>
+                              </div>
                             );
                           })}
                         </div>
@@ -934,9 +1026,20 @@ export default function App() {
                               type="button"
                               onClick={() => {
                                 setIsClassDropdownOpen(false);
-                                setIsClassModalOpen(true);
+                                handleOpenEditClass(activeClass);
                               }}
                               className="w-full text-left px-3 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl flex items-center gap-2 transition-colors shadow-2xs"
+                            >
+                              <Edit3 className="w-4 h-4 text-indigo-600" />
+                              <span>Sửa thông tin lớp "{activeClass.name}" (Khối, Năm, Phòng)</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsClassDropdownOpen(false);
+                                handleOpenCreateClass();
+                              }}
+                              className="w-full text-left px-3 py-2 text-xs font-bold text-slate-700 hover:text-indigo-700 bg-white hover:bg-indigo-50 border border-slate-200 rounded-xl flex items-center gap-2 transition-colors shadow-2xs"
                             >
                               <Plus className="w-4 h-4 text-indigo-600" />
                               <span>Thêm lớp giảng dạy mới...</span>
@@ -1119,6 +1222,64 @@ export default function App() {
 
       {/* Main App Content Viewport */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+        {/* Class Overview Header Banner */}
+        {!currentStudent && (
+          <div className="mb-5 bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-3.5 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-blue-700 text-white flex items-center justify-center font-black text-sm shadow-xs shrink-0">
+                {activeClass.name.replace(/[^0-9a-zA-Z]/g, '').slice(0, 3) || 'LP'}
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-base sm:text-lg font-black text-slate-900">
+                    {activeClass.name}
+                  </h2>
+                  <span className="px-2.5 py-0.5 text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full">
+                    Khối {activeClass.gradeLevel}
+                  </span>
+                  <span className="px-2.5 py-0.5 text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200 rounded-full">
+                    Năm học: {activeClass.schoolYear}
+                  </span>
+                </div>
+                <div className="text-xs text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
+                  <span className="flex items-center gap-1 font-medium text-slate-600">
+                    <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                    <span>{activeClass.roomName ? `Phòng: ${activeClass.roomName}` : 'Chưa đặt phòng học'}</span>
+                  </span>
+                  <span>•</span>
+                  <span>Sĩ số: <strong className="text-slate-800">{activeClass.students.length}</strong> học sinh</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Action: Sửa thông tin lớp */}
+            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+              {isTeacher ? (
+                <button
+                  id="banner-edit-class-btn"
+                  type="button"
+                  onClick={() => handleOpenEditClass(activeClass)}
+                  className="px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl flex items-center gap-1.5 transition-all hover:shadow-2xs active:scale-[0.98]"
+                  title="Chỉnh sửa tên lớp, khối, năm học, phòng học"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Sửa thông tin lớp</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsLoginModalOpen(true)}
+                  className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl flex items-center gap-1.5 transition-colors"
+                  title="Đăng nhập Giáo viên để sửa thông tin lớp"
+                >
+                  <Lock className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Đăng nhập để sửa lớp</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Student Score Tab */}
         {activeTab === 'STUDENT_SCORE' && currentStudent && (
           <StudentScoreView
@@ -1260,8 +1421,13 @@ export default function App() {
 
       <ClassModal
         isOpen={isClassModalOpen}
-        onClose={() => setIsClassModalOpen(false)}
+        onClose={() => {
+          setIsClassModalOpen(false);
+          setClassToEdit(null);
+        }}
         onCreateClass={handleCreateClass}
+        editingClass={classToEdit}
+        onUpdateClass={handleUpdateClass}
       />
 
       {/* Safe confirmation dialog for all deletes (Requirement 5) */}
