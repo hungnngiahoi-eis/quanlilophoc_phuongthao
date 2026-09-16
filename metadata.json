@@ -1,6 +1,6 @@
 {
-  "name": "Trang quản lí lớp học-Thầy Huy",
-  "description": "Trang quản lí lớp học của Thầy Huy: danh sách học sinh kèm ảnh thẻ, sổ điểm cá nhân, sơ đồ lớp tương tác và đồng bộ Google Sheets.",
+  "name": "Nguyễn Lê Phương Thảo",
+  "description": "Trang quản lí lớp học của Phương Thảo: danh sách học sinh kèm ảnh thẻ, sổ điểm cá nhân, sơ đồ lớp tương tác và đồng bộ Google Sheets.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
