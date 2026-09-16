@@ -16,10 +16,10 @@
 
 export const APP_CONFIG = {
   // 1. Đường dẫn Web App Google Apps Script kết nối với Google Sheets
-  DEFAULT_GS_URL: "https://script.google.com/macros/s/AKfycbysYIHahZkJdW3Zau38mBBXswpiRI0dCIH8GMbQCBA_ntVLv5qlgsoz0Q3f7H7MbMSbdg/exec",
+  DEFAULT_GS_URL: "https://script.google.com/macros/s/AKfycbwqLFWvLWGes2_H966lJIbQfBzgZF9gdBxgSZgNQtiGQ6anJBjT9wRwtnDhdDvn1tiUUg/exec",
 
   // 2. Mật khẩu Admin / Giáo viên mặc định
-  DEFAULT_ADMIN_PIN: "Huy0909!@",
+  DEFAULT_ADMIN_PIN: "Thao!@",
 
   // 3. Mật khẩu Học sinh mặc định khi đăng nhập mã số học sinh
   DEFAULT_STUDENT_PIN: "123",
