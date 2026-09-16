@@ -306,7 +306,7 @@ export default function App() {
     setCurrentStudent(null);
     localStorage.removeItem('logged_in_student_info');
     localStorage.setItem('is_math_teacher_logged_in', 'true');
-    showNotification('success', 'Đăng nhập Quản trị viên (Thầy Huy) thành công! Có đầy đủ quyền sửa, xóa và nhập điểm.');
+    showNotification('success', 'Đăng nhập Quản trị viên (Cô Thảo) thành công! Có đầy đủ quyền sửa, xóa và nhập điểm.');
   };
 
   const handleStudentLoginSuccess = (student: Student, classId: string, className: string) => {
@@ -762,7 +762,7 @@ export default function App() {
               {isTeacher ? (
                 <div className="flex items-center gap-1.5 shrink-0">
                   <span className="px-2.5 py-1 text-[11px] sm:text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-lg shadow-2xs">
-                    Admin (Thầy Huy)
+                    Admin (Cô Thảo)
                   </span>
                   <button
                     id="header-logout-btn"
@@ -965,7 +965,7 @@ export default function App() {
 
             {/* Nhóm bên phải: [3. Các nút đồng bộ (khi là giáo viên)] + [Trạng thái đồng bộ] */}
             <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto py-1 ml-auto">
-              {/* 3. CÁC NÚT KHÁC (Chỉ hiển thị cho Giáo viên - Thầy Huy; Ẩn ở chế độ Khách và Học sinh) */}
+              {/* 3. CÁC NÚT KHÁC (Chỉ hiển thị cho Giáo viên - Cô Thảo; Ẩn ở chế độ Khách và Học sinh) */}
               {isTeacher && (
                 <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                   <button
