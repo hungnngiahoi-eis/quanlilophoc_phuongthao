@@ -546,13 +546,14 @@ export const SeatingChart: React.FC<SeatingChartProps> = ({
         </div>
 
         {/* Seating Grid */}
-        <div className="overflow-x-auto pb-2">
-          <div 
-            className="grid gap-4 min-w-[700px] mx-auto justify-center"
-            style={{
-              gridTemplateColumns: `repeat(${seating.cols}, minmax(140px, 190px))`,
-            }}
-          >
+        <div className="overflow-x-auto pb-4 pt-1 scroll-smooth">
+          <div className="inline-flex min-w-full justify-start p-1">
+            <div 
+              className="grid gap-4 w-max mx-auto"
+              style={{
+                gridTemplateColumns: `repeat(${seating.cols}, minmax(140px, 190px))`,
+              }}
+            >
             {/* Column Header labels (Dãy 1, Dãy 2, Dãy 3, Dãy 4...) */}
             {Array.from({ length: seating.cols }, (_, cIdx) => (
               <div
@@ -698,6 +699,7 @@ export const SeatingChart: React.FC<SeatingChartProps> = ({
                 );
               });
             })}
+            </div>
           </div>
         </div>
 
