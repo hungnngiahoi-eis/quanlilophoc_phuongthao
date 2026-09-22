@@ -1,6 +1,154 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Student, ScoreColumn, StudentGrade, ScoreWeight } from '../types';
 import { calculateSemesterAverage, calculateYearlyAverage, getGradeClassification } from '../utils/gradeCalculations';
+
+interface ScoreInputCellProps {
+  studentId: string;
+  columnId: string;
+  score: number | null | undefined;
+  isTeacher: boolean;
+  rowIndex: number;
+  colIndex: number;
+  totalRows: number;
+  onUpdateScore: (studentId: string, columnId: string, score: number | null) => void;
+  onRequestLogin: () => void;
+}
+
+const ScoreInputCell: React.FC<ScoreInputCellProps> = ({
+  studentId,
+  columnId,
+  score,
+  isTeacher,
+  rowIndex,
+  colIndex,
+  totalRows,
+  onUpdateScore,
+  onRequestLogin,
+}) => {
+  const [localVal, setLocalVal] = useState<string>(
+    score !== undefined && score !== null ? String(score) : ''
+  );
+  const [isFocused, setIsFocused] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!isFocused) {
+      setLocalVal(score !== undefined && score !== null ? String(score) : '');
+    }
+  }, [score, isFocused]);
+
+  const commitScore = (rawText: string) => {
+    const clean = rawText.replace(',', '.').trim();
+    if (clean === '' || clean === '-') {
+      if (score !== null && score !== undefined) {
+        onUpdateScore(studentId, columnId, null);
+      }
+      setLocalVal('');
+      return;
+    }
+
+    const num = parseFloat(clean);
+    if (!isNaN(num) && num >= 0 && num <= 10) {
+      const rounded = Math.round(num * 10) / 10;
+      if (score !== rounded) {
+        onUpdateScore(studentId, columnId, rounded);
+      }
+      setLocalVal(String(rounded));
+    } else {
+      setLocalVal(score !== undefined && score !== null ? String(score) : '');
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isTeacher) {
+      onRequestLogin();
+      return;
+    }
+
+    const inputVal = e.target.value;
+
+    if (inputVal === '') {
+      setLocalVal('');
+      return;
+    }
+
+    // Allow typing numbers with up to 1 decimal place, accepting either '.' or ','
+    // Matches: "7", "7.", "7,", "7.5", "7,5", "10", "10.", "0", "0.", "0.5"
+    if (!/^[0-9]{0,2}([.,][0-9]{0,1})?$/.test(inputVal)) {
+      return;
+    }
+
+    const clean = inputVal.replace(',', '.');
+    const num = parseFloat(clean);
+    if (!isNaN(num) && num > 10) {
+      return;
+    }
+
+    setLocalVal(inputVal);
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    commitScore(localVal);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      commitScore(localVal);
+      if (rowIndex + 1 < totalRows) {
+        const nextCell = document.getElementById(`score-cell-${rowIndex + 1}-${colIndex}`);
+        nextCell?.focus();
+      } else {
+        e.currentTarget.blur();
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      commitScore(localVal);
+      const nextCell = document.getElementById(`score-cell-${rowIndex + 1}-${colIndex}`);
+      nextCell?.focus();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      commitScore(localVal);
+      const prevCell = document.getElementById(`score-cell-${rowIndex - 1}-${colIndex}`);
+      prevCell?.focus();
+    } else if (e.key === 'Escape') {
+      setLocalVal(score !== undefined && score !== null ? String(score) : '');
+      e.currentTarget.blur();
+    }
+  };
+
+  const isScoreLow = score !== null && score !== undefined && score < 5.0;
+  const isScoreHigh = score !== null && score !== undefined && score >= 8.5;
+
+  return (
+    <input
+      id={`score-cell-${rowIndex}-${colIndex}`}
+      type="text"
+      inputMode="decimal"
+      value={localVal}
+      onFocus={() => setIsFocused(true)}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      placeholder="-"
+      disabled={!isTeacher}
+      title={
+        isTeacher 
+          ? 'Nhập điểm (0 - 10, chấp nhận 1 số thập phân, VD: 7.5 hoặc 7,5). Enter để chấm học sinh tiếp theo.' 
+          : 'Chỉ giáo viên mới có quyền sửa điểm'
+      }
+      className={`w-12 py-1 text-center font-mono font-semibold rounded-md border text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${
+        !isTeacher 
+          ? 'bg-transparent border-transparent cursor-default' 
+          : 'bg-slate-50 border-slate-200 focus:bg-white focus:border-indigo-400'
+      } ${
+        isScoreLow ? 'text-rose-600 font-bold bg-rose-50/40 border-rose-200' : ''
+      } ${
+        isScoreHigh ? 'text-emerald-700 font-bold' : 'text-slate-800'
+      }`}
+    />
+  );
+};
 import { 
   Calculator, 
   PlusCircle, 
@@ -552,29 +700,26 @@ export const GradeBook: React.FC<GradeBookProps> = ({
                       </td>
 
                       {/* Score Input Cells */}
-                      {currentColumns.map((col) => {
+                      {currentColumns.map((col, colIdx) => {
                         const scoreVal = sGrade.scores[col.id];
-                        const isScoreLow = scoreVal !== null && scoreVal !== undefined && scoreVal < 5.0;
-                        const isScoreHigh = scoreVal !== null && scoreVal !== undefined && scoreVal >= 8.5;
 
                         return (
                           <td
                             key={col.id}
                             className="py-1.5 px-1.5 text-center border-r border-slate-100"
                           >
-                            <input
-                              type="text"
-                              value={scoreVal !== undefined && scoreVal !== null ? scoreVal : ''}
-                              onChange={(e) => handleScoreChange(st.id, col.id, e.target.value)}
-                              placeholder="-"
-                              disabled={!isTeacher}
-                              className={`w-12 py-1 text-center font-mono font-semibold rounded-md border text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${
-                                !isTeacher ? 'bg-transparent border-transparent cursor-default' : 'bg-slate-50 border-slate-200 focus:bg-white'
-                              } ${
-                                isScoreLow ? 'text-rose-600 font-bold bg-rose-50/40 border-rose-200' : ''
-                              } ${
-                                isScoreHigh ? 'text-emerald-700 font-bold' : 'text-slate-800'
-                              }`}
+                            <ScoreInputCell
+                              studentId={st.id}
+                              columnId={col.id}
+                              score={scoreVal}
+                              isTeacher={isTeacher}
+                              rowIndex={idx}
+                              colIndex={colIdx}
+                              totalRows={sortedStudents.length}
+                              onUpdateScore={(studentId, columnId, score) => {
+                                onUpdateScore(activeTab as 'HK1' | 'HK2', studentId, columnId, score);
+                              }}
+                              onRequestLogin={onRequestLogin}
                             />
                           </td>
                         );
