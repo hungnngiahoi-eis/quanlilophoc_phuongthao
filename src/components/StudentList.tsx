@@ -709,16 +709,20 @@ export const StudentList: React.FC<StudentListProps> = ({
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
-                          onClick={() => setFormGoodPoints((prev) => prev - 1)}
+                          onClick={() => setFormGoodPoints((prev) => Math.round((prev - 0.5) * 10) / 10)}
                           className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-rose-50 hover:text-rose-600 border border-slate-300 font-bold text-sm transition-colors active:scale-95"
-                          title="Giảm 1 điểm"
+                          title="Giảm 0.5 điểm"
                         >
                           -
                         </button>
                         <input
                           type="number"
+                          step="0.5"
                           value={formGoodPoints}
-                          onChange={(e) => setFormGoodPoints(parseInt(e.target.value, 10) || 0)}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            setFormGoodPoints(isNaN(val) ? 0 : Math.round(val * 10) / 10);
+                          }}
                           className={`w-16 text-center py-1.5 bg-slate-50 border rounded-lg font-black text-xs ${
                             formGoodPoints > 0 
                               ? 'text-emerald-700 border-emerald-300 bg-emerald-50' 
@@ -729,9 +733,9 @@ export const StudentList: React.FC<StudentListProps> = ({
                         />
                         <button
                           type="button"
-                          onClick={() => setFormGoodPoints((prev) => prev + 1)}
+                          onClick={() => setFormGoodPoints((prev) => Math.round((prev + 0.5) * 10) / 10)}
                           className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-emerald-50 hover:text-emerald-600 border border-slate-300 font-bold text-sm transition-colors active:scale-95"
-                          title="Tăng 1 điểm"
+                          title="Tăng 0.5 điểm"
                         >
                           +
                         </button>
