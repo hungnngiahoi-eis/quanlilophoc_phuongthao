@@ -37,6 +37,151 @@ interface StudentDeskActionModalProps {
   onUpdateStudentFinalNote?: (semester: 'HK1' | 'HK2', studentId: string, note: string) => void;
 }
 
+interface ModalScoreItemProps {
+  col: ScoreColumn;
+  currentScore: number | null | undefined;
+  isTeacher: boolean;
+  onUpdateScore: (columnId: string, score: number | null) => void;
+}
+
+const ModalScoreItem: React.FC<ModalScoreItemProps> = ({
+  col,
+  currentScore,
+  isTeacher,
+  onUpdateScore,
+}) => {
+  const [localVal, setLocalVal] = useState<string>(
+    currentScore !== undefined && currentScore !== null ? String(currentScore) : ''
+  );
+  const [isFocused, setIsFocused] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!isFocused) {
+      setLocalVal(currentScore !== undefined && currentScore !== null ? String(currentScore) : '');
+    }
+  }, [currentScore, isFocused]);
+
+  const commit = (val: string) => {
+    const clean = val.replace(',', '.').trim();
+    if (clean === '' || clean === '-') {
+      onUpdateScore(col.id, null);
+      setLocalVal('');
+      return;
+    }
+    const num = parseFloat(clean);
+    if (!isNaN(num) && num >= 0 && num <= 10) {
+      const rounded = Math.round(num * 10) / 10;
+      onUpdateScore(col.id, rounded);
+      setLocalVal(String(rounded));
+    } else {
+      setLocalVal(currentScore !== undefined && currentScore !== null ? String(currentScore) : '');
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputVal = e.target.value;
+    if (inputVal === '') {
+      setLocalVal('');
+      return;
+    }
+    if (!/^[0-9]{0,2}([.,][0-9]{0,1})?$/.test(inputVal)) {
+      return;
+    }
+    const clean = inputVal.replace(',', '.');
+    const num = parseFloat(clean);
+    if (!isNaN(num) && num > 10) {
+      return;
+    }
+    setLocalVal(inputVal);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      commit(localVal);
+      e.currentTarget.blur();
+    } else if (e.key === 'Escape') {
+      setLocalVal(currentScore !== undefined && currentScore !== null ? String(currentScore) : '');
+      e.currentTarget.blur();
+    }
+  };
+
+  const quickPresets = [10, 9.5, 9.0, 8.5, 8.0, 7.5, 7.0, 6.5, 5.0];
+
+  return (
+    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <div className="font-bold text-slate-800 text-xs sm:text-sm">{col.name}</div>
+          <span className="text-[10px] text-slate-500 font-medium">
+            Hệ số {col.weight} (HS{col.weight})
+          </span>
+        </div>
+
+        {isTeacher ? (
+          <div className="flex items-center gap-1.5">
+            <input
+              type="text"
+              inputMode="decimal"
+              value={localVal}
+              onFocus={() => setIsFocused(true)}
+              onChange={handleChange}
+              onBlur={() => {
+                setIsFocused(false);
+                commit(localVal);
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder="0 - 10"
+              title="Nhập điểm từ 0 đến 10 (chấp nhận 1 chữ số thập phân, VD: 7.5 hoặc 8,2)"
+              className="w-16 px-2 py-1.5 text-center font-mono font-bold text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            {currentScore !== undefined && currentScore !== null && (
+              <button
+                type="button"
+                onClick={() => {
+                  onUpdateScore(col.id, null);
+                  setLocalVal('');
+                }}
+                className="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 text-xs transition-colors cursor-pointer"
+                title="Xóa điểm cột này"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        ) : (
+          <span className="font-mono font-bold text-xs px-2.5 py-1 bg-white border border-slate-200 rounded-lg">
+            {currentScore !== undefined && currentScore !== null ? currentScore : '—'}
+          </span>
+        )}
+      </div>
+
+      {isTeacher && (
+        <div className="flex items-center gap-1 overflow-x-auto pt-0.5 no-scrollbar">
+          <span className="text-[10px] text-slate-400 shrink-0 mr-0.5">Chọn nhanh:</span>
+          {quickPresets.map((preset) => (
+            <button
+              key={preset}
+              type="button"
+              onClick={() => {
+                onUpdateScore(col.id, preset);
+                setLocalVal(String(preset));
+              }}
+              className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border transition-colors shrink-0 cursor-pointer ${
+                currentScore === preset
+                  ? 'bg-indigo-600 text-white border-indigo-600'
+                  : 'bg-white text-slate-700 border-slate-200 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300'
+              }`}
+            >
+              {preset}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const StudentDeskActionModal: React.FC<StudentDeskActionModalProps> = ({
   isOpen,
   onClose,
@@ -97,7 +242,7 @@ export const StudentDeskActionModal: React.FC<StudentDeskActionModalProps> = ({
     if (!isTeacher) return;
     setGoodPoints((prevPoints) => {
       const current = typeof prevPoints === 'number' && !isNaN(prevPoints) ? prevPoints : (student.goodPoints || 0);
-      const nextPoints = current + delta;
+      const nextPoints = Math.round((current + delta) * 10) / 10;
       onUpdateStudent(student.id, { goodPoints: nextPoints }, true);
       showFeedback(delta > 0 ? `+${delta} Điểm tốt!` : `${delta} Điểm tốt!`);
       return nextPoints;
@@ -106,7 +251,7 @@ export const StudentDeskActionModal: React.FC<StudentDeskActionModalProps> = ({
 
   const handleSetPoints = (pts: number) => {
     if (!isTeacher) return;
-    const finalPts = isNaN(pts) ? 0 : pts;
+    const finalPts = isNaN(pts) ? 0 : Math.round(pts * 10) / 10;
     setGoodPoints(finalPts);
     onUpdateStudent(student.id, { goodPoints: finalPts }, true);
     showFeedback(`Đã đổi điểm tốt thành ${finalPts}`);
@@ -125,11 +270,14 @@ export const StudentDeskActionModal: React.FC<StudentDeskActionModalProps> = ({
     const clean = rawVal.replace(',', '.').trim();
     if (clean === '') {
       onUpdateScore(selectedSemester, student.id, columnId, null);
+      showFeedback('Đã xóa điểm');
       return;
     }
     const num = parseFloat(clean);
     if (!isNaN(num) && num >= 0 && num <= 10) {
-      onUpdateScore(selectedSemester, student.id, columnId, Math.round(num * 10) / 10);
+      const rounded = Math.round(num * 10) / 10;
+      onUpdateScore(selectedSemester, student.id, columnId, rounded);
+      showFeedback(`Đã lưu điểm: ${rounded}`);
     }
   };
 
@@ -514,6 +662,7 @@ export const StudentDeskActionModal: React.FC<StudentDeskActionModalProps> = ({
                       <input
                         id="input-custom-good-points"
                         type="number"
+                        step="0.1"
                         value={goodPoints}
                         onChange={(e) => {
                           const val = e.target.value;
@@ -521,9 +670,9 @@ export const StudentDeskActionModal: React.FC<StudentDeskActionModalProps> = ({
                             setGoodPoints(0);
                             return;
                           }
-                          const num = parseInt(val, 10);
+                          const num = parseFloat(val);
                           if (!isNaN(num)) {
-                            handleSetPoints(num);
+                            handleSetPoints(Math.round(num * 10) / 10);
                           }
                         }}
                         className="w-16 text-center py-1 bg-white border border-slate-300 rounded-lg font-bold text-xs focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-hidden"
@@ -593,37 +742,17 @@ export const StudentDeskActionModal: React.FC<StudentDeskActionModalProps> = ({
               {/* Score columns grid */}
               {activeCols.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {activeCols.map((col) => {
-                    const currentScore = studentScores[col.id];
-                    return (
-                      <div
-                        key={col.id}
-                        className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-2"
-                      >
-                        <div>
-                          <div className="font-bold text-slate-800">{col.name}</div>
-                          <span className="text-[10px] text-slate-500 font-medium">
-                            Hệ số {col.weight} (HS{col.weight})
-                          </span>
-                        </div>
-
-                        {isTeacher ? (
-                          <input
-                            type="text"
-                            defaultValue={currentScore !== undefined && currentScore !== null ? currentScore : ''}
-                            key={`${selectedSemester}-${student.id}-${col.id}-${currentScore}`}
-                            onBlur={(e) => handleScoreInput(col.id, e.target.value)}
-                            placeholder="0 - 10"
-                            className="w-16 px-2 py-1.5 text-center font-mono font-bold text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          />
-                        ) : (
-                          <span className="font-mono font-bold text-xs px-2 py-1 bg-white border border-slate-200 rounded-lg">
-                            {currentScore !== undefined && currentScore !== null ? currentScore : '—'}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {activeCols.map((col) => (
+                    <ModalScoreItem
+                      key={`${selectedSemester}-${student.id}-${col.id}`}
+                      col={col}
+                      currentScore={studentScores[col.id]}
+                      isTeacher={isTeacher}
+                      onUpdateScore={(colId, score) => {
+                        handleScoreInput(colId, score !== null && score !== undefined ? String(score) : '');
+                      }}
+                    />
+                  ))}
                 </div>
               ) : (
                 <div className="py-6 text-center text-slate-400 bg-slate-50 rounded-xl">
